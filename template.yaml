@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AI Supply Chain Negotiator - Serverless Backend
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.11  # Using Python 3.11 for better performance and security
+
+Resources:
+  NegotiatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: app.handler
+      Events:
+        RootApi:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+        CreateSession:
+          Type: Api
+          Properties:
+            Path: /api/sessions/new
+            Method: post
+        Chat:
+          Type: Api
+          Properties:
+            Path: /api/chat
+            Method: post
+        GetSession:
+          Type: Api
+          Properties:
+            Path: /api/sessions/{session_id}
+            Method: get
+
+Outputs:
+  NegotiatorApi:
+    Description: "API Gateway endpoint URL for Negotiator function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  NegotiatorFunction:
+    Description: "Negotiator Lambda Function ARN"
+    Value: !GetAtt NegotiatorFunction.Arn

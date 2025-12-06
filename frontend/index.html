@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Supply Chain Negotiator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AI Supply Chain Negotiator</h1>
+            <p class="subtitle">Negotiate with Alex, your AI seller</p>
+        </header>
+
+        <!-- Login/Start Screen -->
+        <div id="startScreen" class="screen">
+            <div class="card">
+                <h2>Welcome to the Negotiation Challenge</h2>
+                <p>Enter your student ID to begin negotiating for microprocessors with our AI seller, Alex.</p>
+                <form id="startForm">
+                    <div class="form-group">
+                        <label for="studentId">Student ID:</label>
+                        <input type="text" id="studentId" name="studentId" required 
+                               placeholder="e.g., S12345" autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Start Negotiation</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Negotiation Screen -->
+        <div id="negotiationScreen" class="screen hidden">
+            <div class="deal-info card">
+                <h3>📊 Deal Parameters</h3>
+                <div id="dealParams" class="params-grid">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <div class="chat-container card">
+                <div id="chatMessages" class="chat-messages">
+                    <!-- Messages will be added here -->
+                </div>
+                <form id="chatForm" class="chat-input-form">
+                    <input type="text" id="messageInput" placeholder="Type your message to Alex..." 
+                           autocomplete="off" required>
+                    <button type="submit" class="btn btn-primary">Send</button>
+                </form>
+                <div class="quick-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="quickMessage('What is your best price?')">Best Price?</button>
+                    <button class="btn btn-secondary btn-sm" onclick="quickMessage('Can you do 1000 units?')">Ask for 1000 units</button>
+                    <button class="btn btn-secondary btn-sm" onclick="quickMessage('I accept the deal')">Accept Deal</button>
+                </div>
+            </div>
+
+            <div class="status-info card">
+                <div class="status-item">
+                    <span class="label">Status:</span>
+                    <span id="statusText" class="value">Active</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Turns:</span>
+                    <span id="turnCount" class="value">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Current Offer:</span>
+                    <span id="currentOffer" class="value">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evaluation Screen -->
+        <div id="evaluationScreen" class="screen hidden">
+            <div class="card">
+                <h2>🎯 Negotiation Complete!</h2>
+                <div id="evaluationResults">
+                    <!-- Populated with evaluation data -->
+                </div>
+                <button onclick="startNewNegotiation()" class="btn btn-primary">Start New Negotiation</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
