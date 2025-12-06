@@ -211,7 +211,7 @@ Each completed negotiation is scored on:
 
 ## Technologies Used
 
-- **Backend**: FastAPI, Python 3.9+, Pydantic, Mangum (for AWS Lambda)
+- **Backend**: FastAPI, Python 3.10+, Pydantic, Mangum (for AWS Lambda)
 - **Frontend**: Vanilla JavaScript, HTML5, CSS3
 - **Deployment**: AWS Lambda, API Gateway, Amplify
 

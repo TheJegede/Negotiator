@@ -10,9 +10,10 @@ from mangum import Mangum
 app = FastAPI(title="AI Supply Chain Negotiator")
 
 # CORS configuration for frontend
+# Note: In production, replace "*" with specific origins for security
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # TODO: Replace with specific origins in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,8 +49,7 @@ class DealParameters:
         self.quality_grade = random.choice(['A', 'B', 'C'])
         self.warranty_months = random.randint(6, 24)
         
-        # Reset random to avoid affecting other randomness
-        random.seed()
+        # Note: Not resetting random seed to maintain other randomness in the application
 
 
 class NegotiationSession:
@@ -110,12 +110,7 @@ class NegotiationSession:
         
         # Check for deal acceptance
         if any(word in message_lower for word in ["accept", "deal", "agreed", "yes, let's do it"]):
-            if self.current_offer:
-                return self._close_deal()
-            else:
-                response = "Great! But I need to know what specific terms you're accepting. Could you clarify the price, quantity, and delivery terms?"
-                self._add_alex_message(response)
-                return response
+            return self._close_deal()
         
         # Check for rejection or walkaway
         if any(word in message_lower for word in ["no deal", "walk away", "never mind", "forget it"]):
@@ -125,7 +120,7 @@ class NegotiationSession:
             return response
         
         # Extract numbers from message (simple parsing)
-        numbers = [int(s) for s in user_message.split() if s.isdigit()]
+        numbers = [int(s) for s in user_message.replace('$', '').split() if s.isdigit()]
         
         # Determine negotiation response
         response = self._generate_negotiation_response(message_lower, numbers)
@@ -189,8 +184,8 @@ class NegotiationSession:
                     self.alex_delivery = proposed_delivery
                     return f"I can accommodate {proposed_delivery} days delivery at our current price of ${self.alex_price}."
         
-        # Tactic 4: Information gathering
-        if "?" in message_lower:
+        # Tactic 4: Information gathering (only for pure questions without negotiations)
+        if "?" in message_lower and not any(keyword in message_lower for keyword in ["price", "$", "quantity", "units", "delivery"]):
             if "warranty" in message_lower:
                 return f"All chips come with a {self.deal_params.warranty_months} month warranty covering manufacturing defects."
             elif "quality" in message_lower or "grade" in message_lower:

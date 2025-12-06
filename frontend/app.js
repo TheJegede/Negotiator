@@ -1,7 +1,10 @@
 // Configuration
+// Update API_BASE_URL for your environment:
+// - Local development: http://localhost:8000
+// - Production: Your AWS API Gateway URL
 const API_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:8000' 
-    : 'https://your-api-gateway-url.amazonaws.com';  // Update for production
+    : 'https://your-api-gateway-url.amazonaws.com';  // TODO: Update for production
 
 // State
 let currentSessionId = null;
