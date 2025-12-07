@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Supply Chain Negotiator</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fa-solid fa-handshake"></i> Negotiator</h2>
+                <button id="new-chat-btn" class="btn-primary-outline">
+                    <i class="fa-solid fa-rotate-right"></i> New Chat
+                </button>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Deal Configuration</h3>
+                <div class="form-group">
+                    <label>Parameters Source:</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="seedParams" value="random" checked> Random</label>
+                        <label><input type="radio" name="seedParams" value="student"> Student ID</label>
+                    </div>
+                </div>
+                <div class="form-group" id="student-id-group" style="display:none;">
+                    <input type="text" id="student-id-input" placeholder="Enter Student ID">
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Deal Overview</h3>
+                <div class="info-card">
+                    <p><strong>Product:</strong> CS-1000 Microprocessor</p>
+                    <p>Negotiate the <strong>Price</strong>, <strong>Delivery Date</strong>, and <strong>Volume</strong>.</p>
+                    <small>Parameters use 15-25% reduction ranges.</small>
+                </div>
+            </div>
+
+            <!-- Dynamic Deal Status (Hidden until needed) -->
+            <div id="deal-status" class="sidebar-section hidden">
+                <h3>Current Agreement</h3>
+                <div class="deal-metrics">
+                    <div class="metric">
+                        <span class="label">Price</span>
+                        <span class="value" id="metric-price">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Delivery</span>
+                        <span class="value" id="metric-delivery">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Volume</span>
+                        <span class="value" id="metric-volume">--</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-area">
+            <div class="chat-header">
+                <div class="agent-info">
+                    <div class="avatar">A</div>
+                    <div>
+                        <h3>Alex</h3>
+                        <span>Supply Chain Manager, ChipSource Inc.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chat-history" class="chat-history">
+                <!-- Messages will be injected here -->
+                <div class="message assistant">
+                    <div class="message-content">
+                        <p>Hello! I'm Alex from ChipSource Inc. I'm looking forward to discussing the terms for the CS-1000 microprocessor order.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <div class="input-container">
+                    <textarea id="user-input" placeholder="Type your proposal here..." rows="1"></textarea>
+                    <button id="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+                <div class="input-footer">
+                    <small>AI can make mistakes. Verify important information.</small>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="api.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
