@@ -20,18 +20,23 @@ class NegotiationAPI {
       return process.env.REACT_APP_API_URL;
     }
 
+    // Check for Amplify environment variable
+    if (typeof window !== 'undefined' && window.REACT_APP_API_URL) {
+      return window.REACT_APP_API_URL;
+    }
+
     // Check for localStorage override (useful for testing)
     const storedUrl = localStorage.getItem('API_BASE_URL');
     if (storedUrl) {
       return storedUrl;
     }
 
-    // Default to relative path for same-origin requests
-    const currentUrl = window.location.origin;
-    
-    // If in production (https), assume API is at same domain
+    // Production API Gateway URL
+    const PRODUCTION_API_URL = 'https://gcvvcqzs3j.execute-api.us-east-2.amazonaws.com/prod';
+
+    // If in production (https), use API Gateway
     if (window.location.protocol === 'https:') {
-      return currentUrl;
+      return PRODUCTION_API_URL;
     }
 
     // For localhost development, try common ports
@@ -39,8 +44,8 @@ class NegotiationAPI {
       return 'http://localhost:8000';
     }
 
-    // Fallback to current origin
-    return currentUrl;
+    // Fallback to production API Gateway
+    return PRODUCTION_API_URL;
   }
 
   /**
