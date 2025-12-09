@@ -79,8 +79,14 @@ class NegotiationAPI {
       const response = await fetch(url, options);
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: response.statusText }));
-        throw new Error(error.detail || `HTTP ${response.status}: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+        
+        // IMPROVEMENT: Handle complex FastAPI error objects so they don't show as [object Object]
+        const errorMessage = typeof errorData.detail === 'object' 
+          ? JSON.stringify(errorData.detail) 
+          : (errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+          
+        throw new Error(errorMessage);
       }
 
       return await response.json();
@@ -97,7 +103,11 @@ class NegotiationAPI {
    */
   async createSession(studentId = null) {
     const params = studentId ? `?student_id=${studentId}` : '';
-    const data = await this.request(`/api/sessions/new${params}`, 'POST');
+    
+    // FIX APPLIED HERE: Added {} as the third argument.
+    // This sends an empty JSON body, which fixes the 422 error from FastAPI.
+    const data = await this.request(`/api/sessions/new${params}`, 'POST', {});
+    
     this.sessionId = data.session_id;
     return data;
   }
