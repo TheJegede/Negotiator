@@ -40,6 +40,10 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('Event listeners registered');
 });
 
+  // Automatically start a session so the user can type immediately
+  startNewNegotiation(); 
+});
+
 /**
  * Handle parameter source selection (Random vs Student ID)
  */
@@ -398,3 +402,4 @@ ${reportText}
     location.reload(); // Fresh start
   });
 }
+
