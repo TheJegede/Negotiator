@@ -33,7 +33,7 @@ class NegotiationAPI {
 
     // --- IMPORTANT: REPLACE THIS WITH YOUR ACTUAL AWS API GATEWAY URL ---
     // Example: https://xyz.execute-api.us-east-2.amazonaws.com/prod
-    const PRODUCTION_API_URL = 'https://YOUR_API_ID.execute-api.us-east-2.amazonaws.com/prod';
+    const PRODUCTION_API_URL = 'https://gcvvcqzs3j.execute-api.us-east-2.amazonaws.com/prod';
 
     // If in production (https), use API Gateway
     if (window.location.protocol === 'https:') {
@@ -198,3 +198,4 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = NegotiationAPI;
 }
+
