@@ -31,8 +31,9 @@ class NegotiationAPI {
       return storedUrl;
     }
 
-    // Production API Gateway URL
-    const PRODUCTION_API_URL = 'https://gcvvcqzs3j.execute-api.us-east-2.amazonaws.com/prod';
+    // --- IMPORTANT: REPLACE THIS WITH YOUR ACTUAL AWS API GATEWAY URL ---
+    // Example: https://xyz.execute-api.us-east-2.amazonaws.com/prod
+    const PRODUCTION_API_URL = 'https://YOUR_API_ID.execute-api.us-east-2.amazonaws.com/prod';
 
     // If in production (https), use API Gateway
     if (window.location.protocol === 'https:') {
@@ -81,7 +82,7 @@ class NegotiationAPI {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: response.statusText }));
         
-        // IMPROVEMENT: Handle complex FastAPI error objects so they don't show as [object Object]
+        // Handle complex FastAPI error objects
         const errorMessage = typeof errorData.detail === 'object' 
           ? JSON.stringify(errorData.detail) 
           : (errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
@@ -102,11 +103,10 @@ class NegotiationAPI {
    * @returns {Promise<Object>} Session data with greeting and parameters
    */
   async createSession(studentId = null) {
-    const params = studentId ? `?student_id=${studentId}` : '';
+    const body = { student_id: studentId };
     
-    // FIX APPLIED HERE: Added {} as the third argument.
-    // This sends an empty JSON body, which fixes the 422 error from FastAPI.
-    const data = await this.request(`/api/sessions/new${params}`, 'POST', {});
+    // FIX: Changed to send body data correctly instead of URL params
+    const data = await this.request('/api/sessions/new', 'POST', body);
     
     this.sessionId = data.session_id;
     return data;
@@ -142,19 +142,21 @@ class NegotiationAPI {
 
   /**
    * Get evaluation for completed negotiation
-   * @returns {Promise<Object>} Evaluation report with scores and feedback
+   * UPDATED: Now accepts finalTerms and sends to /api/evaluate
    */
-  async evaluateDeal() {
+  async evaluateDeal(finalTerms) {
     if (!this.sessionId) {
       throw new Error('No active session.');
     }
 
-    return this.request(`/api/deals/${this.sessionId}/evaluate`);
+    return this.request('/api/evaluate', 'POST', {
+      session_id: this.sessionId,
+      final_terms: finalTerms
+    });
   }
 
   /**
    * Delete/close a session
-   * @returns {Promise<Object>} Confirmation message
    */
   async deleteSession() {
     if (!this.sessionId) {
@@ -168,28 +170,18 @@ class NegotiationAPI {
 
   /**
    * List all active sessions (admin/testing)
-   * @returns {Promise<Object>} List of sessions
    */
   async listSessions() {
     return this.request('/api/sessions');
   }
 
   /**
-   * List all completed deals (admin/testing)
-   * @returns {Promise<Object>} List of completed deals
-   */
-  async listCompletedDeals() {
-    return this.request('/api/deals');
-  }
-
-  /**
    * Check API health/connectivity
-   * @returns {Promise<boolean>} True if API is reachable
    */
   async checkHealth() {
     try {
-      const response = await this.request('/health');
-      return response.status === 'ok' || response.status === 'running';
+      const response = await this.request('/'); // Changed to root to match main.py
+      return response.status === 'running';
     } catch (error) {
       console.warn('API health check failed:', error.message);
       return false;
