@@ -80,18 +80,21 @@ async function startNewNegotiation() {
     const session = await api.createSession(studentId);
     sessionId = session.session_id;
     dealParams = session.deal_params;
-    conversationHistory = session.history || [];
-
+    
+    // API v2 returns greeting directly, v1 returned history
+    const greeting = session.greeting || (session.history ? session.history[0].content : "Hello!");
+    
     console.log('Session created:', sessionId);
 
     // Clear chat history from UI
     clearChatHistory();
 
     // Display greeting
-    displayMessage('assistant', session.greeting);
+    displayMessage('assistant', greeting);
 
-    // Show deal status section
+    // Show deal status section & reset metrics
     document.getElementById('deal-status').classList.remove('hidden');
+    resetMetrics();
 
     // Re-enable button
     newChatBtn.disabled = false;
@@ -139,19 +142,16 @@ async function sendMessage() {
     const result = await api.sendMessage(userMessage);
     displayMessage('assistant', result.ai_response);
 
-    // Update deal metrics if available
-    if (result.missing_terms) {
-      updateDealMetrics(result.missing_terms);
+    // --- UPDATED LOGIC FOR NEW BACKEND ---
+    // 1. Update Metrics if terms were proposed
+    if (result.proposed_terms) {
+      updateDealMetrics(result.proposed_terms);
     }
 
-    // Check for agreement
-    if (result.agreement_detected && result.agreed_terms) {
-      negotiationState = 'CLOSING';
-      handleAgreementDetected(result.agreed_terms);
-    } else if (result.missing_terms && result.missing_terms.length > 0) {
-      // Still negotiating
-      const missing = result.missing_terms.join(', ');
-      updateNegotiationStatus(`Waiting on: ${missing}`);
+    // 2. Check if Backend flagged "Deal Ready"
+    if (result.deal_ready && result.proposed_terms) {
+       negotiationState = 'CLOSING';
+       handleAgreementDetected(result.proposed_terms);
     }
 
     // Re-enable send button
@@ -176,7 +176,10 @@ function displayMessage(role, content) {
 
   const contentDiv = document.createElement('div');
   contentDiv.className = 'message-content';
-  contentDiv.textContent = content; // Use textContent to prevent XSS
+  
+  // Handle newlines better for AI responses
+  const formattedContent = content.replace(/\n/g, '<br>');
+  contentDiv.innerHTML = formattedContent; 
 
   messageDiv.appendChild(contentDiv);
   chatHistory.appendChild(messageDiv);
@@ -186,54 +189,54 @@ function displayMessage(role, content) {
 }
 
 /**
- * Clear chat history from UI (but not from state)
+ * Clear chat history from UI
  */
 function clearChatHistory() {
   const chatHistory = document.getElementById('chat-history');
-  // Keep the initial greeting if exists, or clear all
   chatHistory.innerHTML = '';
 }
 
 /**
- * Update deal metrics display when partial agreement is reached
+ * Reset metric displays
  */
-function updateDealMetrics(missingTerms) {
-  const dealStatus = document.getElementById('deal-status');
+function resetMetrics() {
+    document.getElementById('metric-price').textContent = '--';
+    document.getElementById('metric-delivery').textContent = '--';
+    document.getElementById('metric-volume').textContent = '--';
+}
 
-  // Parse missing terms and extract current values
-  // This is a simplified version - full implementation would parse conversation
+/**
+ * Update deal metrics display
+ */
+function updateDealMetrics(terms) {
   const priceElement = document.getElementById('metric-price');
   const deliveryElement = document.getElementById('metric-delivery');
   const volumeElement = document.getElementById('metric-volume');
 
-  if (!missingTerms.includes('price') && priceElement) {
-    priceElement.textContent = 'Agreed ✓';
-    priceElement.style.color = 'var(--success-text)';
+  if (terms.price) {
+    priceElement.textContent = `$${terms.price}`;
+    priceElement.style.color = 'var(--success-text)'; // Use your CSS variable
   }
-
-  if (!missingTerms.includes('delivery') && deliveryElement) {
-    deliveryElement.textContent = 'Agreed ✓';
+  if (terms.delivery) {
+    deliveryElement.textContent = `${terms.delivery} days`;
     deliveryElement.style.color = 'var(--success-text)';
   }
-
-  if (!missingTerms.includes('volume') && volumeElement) {
-    volumeElement.textContent = 'Agreed ✓';
+  if (terms.volume) {
+    // Format number with commas
+    volumeElement.textContent = terms.volume.toLocaleString() + ' units';
     volumeElement.style.color = 'var(--success-text)';
   }
 }
 
-/**
- * Update negotiation status text
- */
-function updateNegotiationStatus(status) {
-  // This can be expanded to update a status display element
-  console.log('Status:', status);
-}
 
 /**
  * Handle agreement detection - show confirmation dialog
  */
 function handleAgreementDetected(agreedTerms) {
+  // Remove existing modals if any
+  const existingModal = document.querySelector('.confirmation-modal');
+  if (existingModal) existingModal.remove();
+
   // Create and display confirmation modal
   const modal = document.createElement('div');
   modal.className = 'confirmation-modal';
@@ -261,8 +264,8 @@ function handleAgreementDetected(agreedTerms) {
   `;
 
   box.innerHTML = `
-    <h3 style="color: var(--text-primary); margin-bottom: 1rem;">✅ Deal Confirmed!</h3>
-    <div style="background: var(--success-bg); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.95rem;">
+    <h3 style="color: #333; margin-bottom: 1rem;">✅ Deal Confirmed!</h3>
+    <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.95rem;">
       <p style="margin-bottom: 0.5rem;"><strong>Price:</strong> $${agreedTerms.price} per unit</p>
       <p style="margin-bottom: 0.5rem;"><strong>Delivery:</strong> ${agreedTerms.delivery} days</p>
       <p><strong>Volume:</strong> ${agreedTerms.volume?.toLocaleString() || 'Standard'} units</p>
@@ -270,18 +273,18 @@ function handleAgreementDetected(agreedTerms) {
     <div style="display: flex; gap: 1rem;">
       <button id="confirm-deal-btn" style="
         flex: 1;
-        background: var(--primary-color);
+        background: #16a34a;
         color: white;
         border: none;
         padding: 0.75rem;
         border-radius: 6px;
         cursor: pointer;
         font-weight: 500;
-      ">Finalize Deal</button>
+      ">Finalize & Grade</button>
       <button id="continue-negotiating-btn" style="
         flex: 1;
-        background: var(--border-color);
-        color: var(--text-primary);
+        background: #e5e7eb;
+        color: #374151;
         border: none;
         padding: 0.75rem;
         border-radius: 6px;
@@ -296,8 +299,11 @@ function handleAgreementDetected(agreedTerms) {
 
   // Event handlers
   document.getElementById('confirm-deal-btn').addEventListener('click', async () => {
-    modal.remove();
+    // Show loading state
+    document.getElementById('confirm-deal-btn').textContent = "Grading...";
+    document.getElementById('confirm-deal-btn').disabled = true;
     await finalizeDeal(agreedTerms);
+    modal.remove();
   });
 
   document.getElementById('continue-negotiating-btn').addEventListener('click', () => {
@@ -314,13 +320,14 @@ async function finalizeDeal(agreedTerms) {
   try {
     negotiationState = 'EVALUATION';
 
-    displayMessage('assistant', 'Excellent! Your deal has been finalized. Generating your performance evaluation...');
+    displayMessage('assistant', 'Excellent! Deal confirmed. Generating your performance evaluation...');
 
-    // Fetch evaluation
-    const evaluation = await api.evaluateDeal();
+    // Fetch evaluation from backend
+    // PASSING TERMS TO API
+    const result = await api.evaluateDeal(agreedTerms);
 
     // Display evaluation report
-    displayEvaluation(evaluation);
+    displayEvaluation(result.evaluation_report);
 
   } catch (error) {
     console.error('Error finalizing deal:', error);
@@ -330,8 +337,9 @@ async function finalizeDeal(agreedTerms) {
 
 /**
  * Display comprehensive evaluation report
+ * UPDATED: Handles the text string returned by Bedrock
  */
-function displayEvaluation(evaluation) {
+function displayEvaluation(reportText) {
   const modal = document.createElement('div');
   modal.className = 'evaluation-modal';
   modal.style.cssText = `
@@ -348,58 +356,30 @@ function displayEvaluation(evaluation) {
     overflow-y: auto;
   `;
 
-  const scoreColor = evaluation.overall_score >= 80 ? '#16a34a' : 
-                     evaluation.overall_score >= 60 ? '#ea580c' : '#dc2626';
-
   const box = document.createElement('div');
   box.style.cssText = `
     background: white;
     border-radius: 12px;
     padding: 2rem;
-    max-width: 500px;
+    max-width: 600px;
+    width: 90%;
     margin: 2rem auto;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    max-height: 80vh;
+    overflow-y: auto;
   `;
 
-  const metricsHtml = Object.entries(evaluation.metrics).map(([key, metric]) => `
-    <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-        <strong style="text-transform: capitalize;">${key.replace(/_/g, ' ')}</strong>
-        <span style="background: ${scoreColor}; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: 600;">
-          ${metric.score}/100 (${metric.grade})
-        </span>
-      </div>
-      <small style="color: var(--text-secondary);">Weight: ${metric.weight}</small>
-    </div>
-  `).join('');
-
+  // Render the text report cleanly
   box.innerHTML = `
-    <h2 style="color: var(--text-primary); margin-bottom: 1.5rem; text-align: center;">📊 Negotiation Evaluation</h2>
+    <h2 style="color: #333; margin-bottom: 1.5rem; text-align: center;">📊 Negotiation Report</h2>
 
-    <div style="text-align: center; margin-bottom: 2rem; padding: 1.5rem; background: var(--assistant-msg-bg); border-radius: 8px;">
-      <div style="font-size: 3em; color: ${scoreColor}; font-weight: bold;">${evaluation.overall_score}</div>
-      <div style="font-size: 1.1rem; color: var(--text-primary); font-weight: 600;">Overall Score (${evaluation.overall_grade})</div>
-    </div>
-
-    <h3 style="color: var(--text-primary); margin-bottom: 1rem;">Metric Scores</h3>
-    <div style="margin-bottom: 2rem;">${metricsHtml}</div>
-
-    <h3 style="color: var(--text-primary); margin-bottom: 1rem;">Deal Analysis</h3>
-    <div style="background: var(--assistant-msg-bg); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; font-size: 0.9rem; line-height: 1.6;">
-      <p><strong>Price:</strong> $${evaluation.negotiation_analysis.price_analysis.final} (Target: $${evaluation.negotiation_analysis.price_analysis.target})</p>
-      <p><strong>Delivery:</strong> ${evaluation.negotiation_analysis.delivery_analysis.final} days (Target: ${evaluation.negotiation_analysis.delivery_analysis.target} days)</p>
-      <p><strong>Volume:</strong> ${evaluation.negotiation_analysis.volume?.toLocaleString()} units</p>
-      <p><strong>Rounds:</strong> ${evaluation.negotiation_rounds}</p>
-    </div>
-
-    <h3 style="color: var(--text-primary); margin-bottom: 1rem;">Feedback</h3>
-    <div style="background: var(--user-msg-bg); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">
-${evaluation.feedback}
+    <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; font-size: 1rem; line-height: 1.6; white-space: pre-wrap; font-family: sans-serif;">
+${reportText}
     </div>
 
     <button id="new-negotiation-btn" style="
       width: 100%;
-      background: var(--primary-color);
+      background: #2563eb;
       color: white;
       border: none;
       padding: 1rem;
