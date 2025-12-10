@@ -38,9 +38,9 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   console.log('Event listeners registered');
-});
 
-  // Automatically start a session so the user can type immediately
+  // --- AUTO-START SESSION FIX ---
+  // Automatically click "New Chat" logic so the user can type immediately
   startNewNegotiation(); 
 });
 
@@ -68,25 +68,36 @@ async function startNewNegotiation() {
     let studentId = null;
 
     if (seedMode === 'student') {
-      studentId = document.getElementById('student-id-input')?.value || null;
-      if (!studentId) {
-        displayMessage('error', 'Please enter a Student ID');
-        return;
+      const studentInput = document.getElementById('student-id-input');
+      studentId = studentInput ? studentInput.value : null;
+      
+      // Only enforce ID if they specifically selected "Student ID" mode
+      if (!studentId && seedMode === 'student') {
+        // If empty, just warn but allow random or don't start
+        // For smoother UX, let's allow it or return
+        // displayMessage('error', 'Please enter a Student ID');
+        // return; 
       }
     }
 
     // Disable button during loading
     const newChatBtn = document.getElementById('new-chat-btn');
-    newChatBtn.disabled = true;
-    newChatBtn.textContent = 'Starting...';
+    if (newChatBtn) {
+        newChatBtn.disabled = true;
+        newChatBtn.textContent = 'Starting...';
+    }
 
     // Create new session
+    if (!api) api = new NegotiationAPI(); // Safety check
     const session = await api.createSession(studentId);
+    
+    // Update State
     sessionId = session.session_id;
+    api.sessionId = sessionId; 
     dealParams = session.deal_params;
     
-    // API v2 returns greeting directly, v1 returned history
-    const greeting = session.greeting || (session.history ? session.history[0].content : "Hello!");
+    // API v2 returns greeting directly
+    const greeting = session.greeting || "Hello! Let's negotiate.";
     
     console.log('Session created:', sessionId);
 
@@ -97,17 +108,20 @@ async function startNewNegotiation() {
     displayMessage('assistant', greeting);
 
     // Show deal status section & reset metrics
-    document.getElementById('deal-status').classList.remove('hidden');
+    const dealStatus = document.getElementById('deal-status');
+    if (dealStatus) dealStatus.classList.remove('hidden');
     resetMetrics();
-
-    // Re-enable button
-    newChatBtn.disabled = false;
-    newChatBtn.textContent = '↻ New Chat';
 
   } catch (error) {
     console.error('Error starting negotiation:', error);
-    displayMessage('error', 'Failed to start negotiation. Please try again.');
-    document.getElementById('new-chat-btn').disabled = false;
+    displayMessage('error', 'Failed to connect to AI. Please try refreshing.');
+  } finally {
+    // Re-enable button
+    const newChatBtn = document.getElementById('new-chat-btn');
+    if (newChatBtn) {
+        newChatBtn.disabled = false;
+        newChatBtn.textContent = '↻ New Chat';
+    }
   }
 }
 
@@ -128,25 +142,33 @@ async function sendMessage() {
   const input = document.getElementById('user-input');
   const userMessage = input.value.trim();
 
-  if (!userMessage || !sessionId) {
-    return;
+  // FIX: Don't just return if no session. Check if we need to start one.
+  if (!userMessage) return;
+  
+  // If user types before session loads, wait for it or start it
+  if (!sessionId) {
+      console.log("No session found, starting one now...");
+      await startNewNegotiation();
+      if (!sessionId) return; // If still failed, stop
   }
 
   try {
     // Disable send button during processing
     const sendBtn = document.getElementById('send-btn');
-    sendBtn.disabled = true;
+    if (sendBtn) sendBtn.disabled = true;
 
     // Display user message
     displayMessage('user', userMessage);
     input.value = '';
     input.style.height = 'auto'; // Reset textarea height
+    
+    // Disable input while thinking
+    input.disabled = true;
 
     // Get AI response
     const result = await api.sendMessage(userMessage);
     displayMessage('assistant', result.ai_response);
 
-    // --- UPDATED LOGIC FOR NEW BACKEND ---
     // 1. Update Metrics if terms were proposed
     if (result.proposed_terms) {
       updateDealMetrics(result.proposed_terms);
@@ -158,14 +180,15 @@ async function sendMessage() {
        handleAgreementDetected(result.proposed_terms);
     }
 
-    // Re-enable send button
-    sendBtn.disabled = false;
-    input.focus();
-
   } catch (error) {
     console.error('Error sending message:', error);
     displayMessage('error', 'Failed to send message. Please try again.');
-    document.getElementById('send-btn').disabled = false;
+  } finally {
+    const sendBtn = document.getElementById('send-btn');
+    if (sendBtn) sendBtn.disabled = false;
+    
+    input.disabled = false;
+    input.focus();
   }
 }
 
@@ -174,6 +197,7 @@ async function sendMessage() {
  */
 function displayMessage(role, content) {
   const chatHistory = document.getElementById('chat-history');
+  if (!chatHistory) return;
 
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${role}`;
@@ -182,7 +206,7 @@ function displayMessage(role, content) {
   contentDiv.className = 'message-content';
   
   // Handle newlines better for AI responses
-  const formattedContent = content.replace(/\n/g, '<br>');
+  const formattedContent = content ? content.replace(/\n/g, '<br>') : '';
   contentDiv.innerHTML = formattedContent; 
 
   messageDiv.appendChild(contentDiv);
@@ -197,16 +221,19 @@ function displayMessage(role, content) {
  */
 function clearChatHistory() {
   const chatHistory = document.getElementById('chat-history');
-  chatHistory.innerHTML = '';
+  if (chatHistory) chatHistory.innerHTML = '';
 }
 
 /**
  * Reset metric displays
  */
 function resetMetrics() {
-    document.getElementById('metric-price').textContent = '--';
-    document.getElementById('metric-delivery').textContent = '--';
-    document.getElementById('metric-volume').textContent = '--';
+    const p = document.getElementById('metric-price');
+    const d = document.getElementById('metric-delivery');
+    const v = document.getElementById('metric-volume');
+    if(p) p.textContent = '--';
+    if(d) d.textContent = '--';
+    if(v) v.textContent = '--';
 }
 
 /**
@@ -217,21 +244,19 @@ function updateDealMetrics(terms) {
   const deliveryElement = document.getElementById('metric-delivery');
   const volumeElement = document.getElementById('metric-volume');
 
-  if (terms.price) {
+  if (terms.price && priceElement) {
     priceElement.textContent = `$${terms.price}`;
-    priceElement.style.color = 'var(--success-text)'; // Use your CSS variable
+    priceElement.style.color = 'var(--success-text, #16a34a)';
   }
-  if (terms.delivery) {
+  if (terms.delivery && deliveryElement) {
     deliveryElement.textContent = `${terms.delivery} days`;
-    deliveryElement.style.color = 'var(--success-text)';
+    deliveryElement.style.color = 'var(--success-text, #16a34a)';
   }
-  if (terms.volume) {
-    // Format number with commas
+  if (terms.volume && volumeElement) {
     volumeElement.textContent = terms.volume.toLocaleString() + ' units';
-    volumeElement.style.color = 'var(--success-text)';
+    volumeElement.style.color = 'var(--success-text, #16a34a)';
   }
 }
-
 
 /**
  * Handle agreement detection - show confirmation dialog
@@ -302,19 +327,27 @@ function handleAgreementDetected(agreedTerms) {
   document.body.appendChild(modal);
 
   // Event handlers
-  document.getElementById('confirm-deal-btn').addEventListener('click', async () => {
-    // Show loading state
-    document.getElementById('confirm-deal-btn').textContent = "Grading...";
-    document.getElementById('confirm-deal-btn').disabled = true;
-    await finalizeDeal(agreedTerms);
-    modal.remove();
-  });
+  const confirmBtn = document.getElementById('confirm-deal-btn');
+  const continueBtn = document.getElementById('continue-negotiating-btn');
 
-  document.getElementById('continue-negotiating-btn').addEventListener('click', () => {
-    modal.remove();
-    negotiationState = 'NEGOTIATING';
-    document.getElementById('user-input').focus();
-  });
+  if (confirmBtn) {
+      confirmBtn.addEventListener('click', async () => {
+        // Show loading state
+        confirmBtn.textContent = "Grading...";
+        confirmBtn.disabled = true;
+        await finalizeDeal(agreedTerms);
+        modal.remove();
+      });
+  }
+
+  if (continueBtn) {
+      continueBtn.addEventListener('click', () => {
+        modal.remove();
+        negotiationState = 'NEGOTIATING';
+        const input = document.getElementById('user-input');
+        if (input) input.focus();
+      });
+  }
 }
 
 /**
@@ -327,7 +360,6 @@ async function finalizeDeal(agreedTerms) {
     displayMessage('assistant', 'Excellent! Deal confirmed. Generating your performance evaluation...');
 
     // Fetch evaluation from backend
-    // PASSING TERMS TO API
     const result = await api.evaluateDeal(agreedTerms);
 
     // Display evaluation report
@@ -341,7 +373,6 @@ async function finalizeDeal(agreedTerms) {
 
 /**
  * Display comprehensive evaluation report
- * UPDATED: Handles the text string returned by Bedrock
  */
 function displayEvaluation(reportText) {
   const modal = document.createElement('div');
@@ -373,7 +404,6 @@ function displayEvaluation(reportText) {
     overflow-y: auto;
   `;
 
-  // Render the text report cleanly
   box.innerHTML = `
     <h2 style="color: #333; margin-bottom: 1.5rem; text-align: center;">📊 Negotiation Report</h2>
 
@@ -397,9 +427,11 @@ ${reportText}
   modal.appendChild(box);
   document.body.appendChild(modal);
 
-  document.getElementById('new-negotiation-btn').addEventListener('click', () => {
-    modal.remove();
-    location.reload(); // Fresh start
-  });
+  const newBtn = document.getElementById('new-negotiation-btn');
+  if (newBtn) {
+      newBtn.addEventListener('click', () => {
+        modal.remove();
+        location.reload(); // Fresh start
+      });
+  }
 }
-
