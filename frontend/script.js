@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.error('API class not found. Check api.js is loaded.');
   }
 
-  // Event Listeners
+  // Event Listeners for Chat
   const newChatBtn = document.getElementById('new-chat-btn');
   const sendBtn = document.getElementById('send-btn');
   const userInput = document.getElementById('user-input');
@@ -37,10 +37,27 @@ document.addEventListener('DOMContentLoaded', function() {
     radio.addEventListener('change', handleParameterSourceChange);
   });
 
+  // --- NEW CODE: INTRO MODAL LOGIC ---
+  const startBtn = document.getElementById('start-btn');
+  const introOverlay = document.getElementById('intro-overlay');
+  
+  if (startBtn && introOverlay) {
+      startBtn.addEventListener('click', () => {
+          // Fade out effect
+          introOverlay.style.opacity = '0';
+          introOverlay.style.transition = 'opacity 0.5s ease';
+          
+          // Remove from screen after fade
+          setTimeout(() => {
+              introOverlay.style.display = 'none';
+          }, 500);
+      });
+  }
+  // -----------------------------------
+
   console.log('Event listeners registered');
 
-  // --- AUTO-START SESSION FIX ---
-  // Automatically click "New Chat" logic so the user can type immediately
+  // Automatically start a session in the background so it's ready when they click "Begin"
   startNewNegotiation(); 
 });
 
@@ -70,14 +87,6 @@ async function startNewNegotiation() {
     if (seedMode === 'student') {
       const studentInput = document.getElementById('student-id-input');
       studentId = studentInput ? studentInput.value : null;
-      
-      // Only enforce ID if they specifically selected "Student ID" mode
-      if (!studentId && seedMode === 'student') {
-        // If empty, just warn but allow random or don't start
-        // For smoother UX, let's allow it or return
-        // displayMessage('error', 'Please enter a Student ID');
-        // return; 
-      }
     }
 
     // Disable button during loading
@@ -114,7 +123,8 @@ async function startNewNegotiation() {
 
   } catch (error) {
     console.error('Error starting negotiation:', error);
-    displayMessage('error', 'Failed to connect to AI. Please try refreshing.');
+    // Note: We don't show an error alert here because it runs on load. 
+    // If it fails, the user will just see an empty chat and can click "New Chat" manually.
   } finally {
     // Re-enable button
     const newChatBtn = document.getElementById('new-chat-btn');
