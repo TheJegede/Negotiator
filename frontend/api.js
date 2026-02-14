@@ -132,12 +132,19 @@ class NegotiationAPI {
    * Retrieve complete session data
    * @returns {Promise<Object>} Full session with history
    */
-  async getSession() {
-    if (!this.sessionId) {
-      throw new Error('No active session.');
+  /**
+   * UPDATED: Retrieve session data (Current or History)
+   */
+  async getSession(sessionId = null) {
+    // If an ID is provided (history), use it. Otherwise use current session.
+    const targetId = sessionId || this.sessionId;
+
+    if (!targetId) {
+      throw new Error('No session ID provided.');
     }
 
-    return this.request(`/api/sessions/${this.sessionId}`);
+    // Reuse your existing request helper
+    return this.request(`/api/sessions/${targetId}`, 'GET');
   }
 
   /**
@@ -198,4 +205,5 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = NegotiationAPI;
 }
+
 
