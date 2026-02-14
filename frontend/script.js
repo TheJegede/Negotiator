@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const userInput = document.getElementById('user-input');
   
   if (newChatBtn) newChatBtn.addEventListener('click', startNewNegotiation);
+  renderChatHistory();
   if (sendBtn) sendBtn.addEventListener('click', sendMessage);
   if (userInput) userInput.addEventListener('keypress', handleKeyPress);
 
@@ -102,6 +103,9 @@ async function startNewNegotiation() {
     
     // Update State
     sessionId = session.session_id;
+    // NEW: Save to History
+    saveToHistoryList(sessionId, `Negotiation ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`);
+    renderChatHistory();
     api.sessionId = sessionId; 
     dealParams = session.deal_params;
     
@@ -445,3 +449,84 @@ ${reportText}
       });
   }
 }
+
+// --- HISTORY MANAGEMENT FUNCTIONS ---
+
+const HISTORY_KEY = 'negotiator_sessions';
+
+function saveToHistoryList(id, title) {
+    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    // Add new chat to top
+    history.unshift({ id, title, date: new Date().toISOString() });
+    // Keep last 15 chats
+    if (history.length > 15) history.pop();
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function renderChatHistory() {
+    const listContainer = document.getElementById('chat-list');
+    if (!listContainer) return;
+    
+    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    listContainer.innerHTML = '';
+
+    if (history.length === 0) {
+        listContainer.innerHTML = '<div style="padding:10px; color:#94a3b8; font-size:0.85rem; text-align:center;">No recent chats</div>';
+        return;
+    }
+
+    history.forEach(item => {
+        const div = document.createElement('div');
+        div.className = `chat-item ${item.id === sessionId ? 'active' : ''}`;
+        div.innerHTML = `
+            <i class="fa-regular fa-comments"></i>
+            <span style="overflow:hidden; text-overflow:ellipsis;">${item.title}</span>
+        `;
+        div.onclick = () => loadPreviousSession(item.id);
+        listContainer.appendChild(div);
+    });
+}
+
+async function loadPreviousSession(id) {
+    if (id === sessionId) return;
+
+    // UI Feedback
+    const listContainer = document.getElementById('chat-list');
+    listContainer.style.opacity = '0.5';
+
+    try {
+        // Load data from backend
+        const sessionData = await api.getSession(id);
+        
+        sessionId = sessionData.session_id;
+        api.sessionId = sessionId;
+        dealParams = sessionData.deal_params;
+        
+        // Clear UI
+        clearChatHistory();
+        
+        // Replay messages
+        if (sessionData.history && Array.isArray(sessionData.history)) {
+            sessionData.history.forEach(msg => {
+                displayMessage(msg.role, msg.content);
+            });
+        }
+        
+        // Restore Deal Status if available (Optional improvement)
+        if (dealParams) {
+             // Reset metrics display to hide old values or show defaults
+             resetMetrics();
+        }
+
+        // Update Sidebar Highlight
+        renderChatHistory();
+        
+    } catch (error) {
+        console.error("Failed to load session", error);
+        alert("Could not load this chat history.");
+    } finally {
+        listContainer.style.opacity = '1';
+    }
+}
+
+
