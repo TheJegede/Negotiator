@@ -494,4 +494,74 @@ body {
     .sidebar-section:nth-child(n+3) {
         display: none;
     }
+
+}
+
+/* --- NEW STYLES FOR CHAT HISTORY --- */
+
+/* Allow the chat list section to grow and fill space */
+.sidebar-section.flex-grow {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 200px; /* Minimum height ensures it doesn't collapse */
+}
+
+.chat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto; /* Scroll ONLY the list, not the whole sidebar */
+    flex: 1; 
+    padding-right: 5px;
+    margin-top: 0.5rem;
+}
+
+/* Scrollbar styling for chat list */
+.chat-list::-webkit-scrollbar {
+    width: 4px;
+}
+.chat-list::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+.chat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid transparent;
+    background: #f8fafc;
+}
+
+.chat-item:hover {
+    background-color: #f1f5f9;
+    border-color: var(--border-color);
+}
+
+.chat-item.active {
+    background-color: #eff6ff; /* Light blue highlight */
+    color: var(--primary-color);
+    font-weight: 600;
+    border-color: #bfdbfe;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.chat-item i {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.chat-item.active i {
+    color: var(--primary-color);
 }
