@@ -31,9 +31,9 @@ class NegotiationAPI {
       return storedUrl;
     }
 
-    // --- IMPORTANT: REPLACE THIS WITH YOUR ACTUAL AWS API GATEWAY URL ---
-    // Example: https://xyz.execute-api.us-east-2.amazonaws.com/prod
-    const PRODUCTION_API_URL = 'https://gcvvcqzs3j.execute-api.us-east-2.amazonaws.com/prod';
+    // Production URL loaded from config.js (window.APP_CONFIG.API_URL)
+    const PRODUCTION_API_URL = (window.APP_CONFIG && window.APP_CONFIG.API_URL)
+      || 'https://gcvvcqzs3j.execute-api.us-east-2.amazonaws.com/prod';
 
     // If in production (https), use API Gateway
     if (window.location.protocol === 'https:') {
@@ -63,7 +63,7 @@ class NegotiationAPI {
    */
   async request(endpoint, method = 'GET', body = null) {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     const options = {
       method,
       headers: {
@@ -81,12 +81,12 @@ class NegotiationAPI {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-        
+
         // Handle complex FastAPI error objects
-        const errorMessage = typeof errorData.detail === 'object' 
-          ? JSON.stringify(errorData.detail) 
+        const errorMessage = typeof errorData.detail === 'object'
+          ? JSON.stringify(errorData.detail)
           : (errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
-          
+
         throw new Error(errorMessage);
       }
 
@@ -104,10 +104,10 @@ class NegotiationAPI {
    */
   async createSession(studentId = null) {
     const body = { student_id: studentId };
-    
+
     // FIX: Changed to send body data correctly instead of URL params
     const data = await this.request('/api/sessions/new', 'POST', body);
-    
+
     this.sessionId = data.session_id;
     return data;
   }
