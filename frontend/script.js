@@ -11,6 +11,15 @@ let sessionId = null;
 let negotiationState = 'SETUP'; // SETUP, NEGOTIATING, CLOSING, EVALUATION
 
 /**
+ * Escape HTML to prevent XSS when inserting into innerHTML contexts
+ */
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
  * Initialize API and event listeners on page load
  */
 document.addEventListener('DOMContentLoaded', function() {
@@ -219,9 +228,9 @@ function displayMessage(role, content) {
   const contentDiv = document.createElement('div');
   contentDiv.className = 'message-content';
   
-  // Handle newlines better for AI responses
-  const formattedContent = content ? content.replace(/\n/g, '<br>') : '';
-  contentDiv.innerHTML = formattedContent; 
+  // Safe rendering: use textContent to prevent XSS, pre-wrap preserves line breaks
+  contentDiv.textContent = content || '';
+  contentDiv.style.whiteSpace = 'pre-wrap';
 
   messageDiv.appendChild(contentDiv);
   chatHistory.appendChild(messageDiv);
@@ -422,7 +431,7 @@ function displayEvaluation(reportText) {
     <h2 style="color: #333; margin-bottom: 1.5rem; text-align: center;">📊 Negotiation Report</h2>
 
     <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; font-size: 1rem; line-height: 1.6; white-space: pre-wrap; font-family: sans-serif;">
-${reportText}
+${escapeHtml(reportText)}
     </div>
 
     <button id="new-negotiation-btn" style="
