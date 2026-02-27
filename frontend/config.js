@@ -4,5 +4,5 @@
  * Leave empty for localhost development (auto-detects http://localhost:8000).
  */
 window.APP_CONFIG = {
-    API_URL: ''
+    API_URL: 'https://gcvvcqzs3j.execute-api.us-east-2.amazonaws.com/prod'
 };
